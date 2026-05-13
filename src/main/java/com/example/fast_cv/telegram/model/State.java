@@ -1,0 +1,17 @@
+package com.example.fast_cv.telegram.model;
+
+public enum State {
+    START,
+    WAITING_FULL_NAME,
+    WAITING_BIRTHDAY,
+    WAITING_CITY,
+    WAITING_EMAIL,
+    WAITING_DEGREE,
+    WAITING_EXPERIENCE,
+    WAITING_PROJECTS,
+    WAITING_HARD_SKILLS,
+    WAITING_SOFT_SKILLS,
+    WAITING_TEMPLATE,
+    WAITING_LINKS,
+    DONE
+}
