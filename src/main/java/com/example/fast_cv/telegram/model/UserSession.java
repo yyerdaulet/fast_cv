@@ -11,7 +11,7 @@ public class UserSession {
     private String birthday;
     private String city;
     private String email;
-    private String degree;
+    private String education;
     private String experience;
     private String projects;
     private String hard_skills;

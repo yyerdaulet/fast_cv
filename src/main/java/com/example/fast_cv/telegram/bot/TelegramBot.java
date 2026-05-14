@@ -1,8 +1,12 @@
 package com.example.fast_cv.telegram.bot;
 
+import com.example.fast_cv.telegram.ai_integration.model.CvData;
+import com.example.fast_cv.telegram.ai_integration.service.CvParserService;
 import com.example.fast_cv.telegram.service.SessionManager;
 import com.example.fast_cv.telegram.model.UserSession;
 import com.example.fast_cv.telegram.model.State;
+import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -11,7 +15,6 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.media.InputMedia;
 import org.telegram.telegrambots.meta.api.objects.media.InputMediaPhoto;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
@@ -24,6 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Component
+@RequiredArgsConstructor
 public class TelegramBot extends TelegramLongPollingBot {
 
     @Value("${telegram.bot.username}")
@@ -31,6 +35,8 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     @Value("${telegram.bot.token}")
     private String token;
+
+    private final CvParserService cvParserService;
 
     @Override
     public String getBotUsername(){
@@ -89,11 +95,11 @@ public class TelegramBot extends TelegramLongPollingBot {
             case WAITING_EMAIL -> {
                 session.setEmail(text);
                 send(chatId,"Enter your Degree");
-                session.setState(State.WAITING_DEGREE);
+                session.setState(State.WAITING_EDUCATION);
             }
 
-            case WAITING_DEGREE -> {
-                session.setDegree(text);
+            case WAITING_EDUCATION -> {
+                session.setEducation(text);
                 send(chatId,"Enter your experience");
                 session.setState(State.WAITING_EXPERIENCE);
             }
@@ -118,6 +124,8 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             case WAITING_SOFT_SKILLS-> {
                 session.setSoft_skills(text);
+                String rawData = collectRowData(session);
+                CvData json = cvParserService.parse(rawData);
                 send(chatId,"Add additional links");
                 session.setState(State.WAITING_LINKS);
             }
@@ -152,6 +160,12 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
 
 
+    }
+
+    private static @NonNull String collectRowData(UserSession session) {
+        return "education : " + session.getEducation() + "\n" +
+                "projects : " + session.getProjects() + "\n" +
+                "experience : " + session.getExperience();
     }
 
     private void sendTemplateKeyBoard(Long chatId) {
