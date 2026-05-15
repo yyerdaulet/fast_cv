@@ -2,6 +2,7 @@ package com.example.fast_cv.telegram.bot;
 
 import com.example.fast_cv.telegram.ai_integration.model.CvData;
 import com.example.fast_cv.telegram.ai_integration.service.CvParserService;
+import com.example.fast_cv.telegram.ai_integration.service.ResumeDocumentBuilder;
 import com.example.fast_cv.telegram.service.SessionManager;
 import com.example.fast_cv.telegram.model.UserSession;
 import com.example.fast_cv.telegram.model.State;
@@ -23,6 +24,8 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,6 +40,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     private String token;
 
     private final CvParserService cvParserService;
+    private final ResumeDocumentBuilder resumeDocumentBuilder;
 
     @Override
     public String getBotUsername(){
@@ -94,7 +98,13 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             case WAITING_EMAIL -> {
                 session.setEmail(text);
-                send(chatId,"Enter your Degree");
+                send(chatId,"Enter your position");
+                session.setState(State.WAITING_POSITION);
+            }
+
+            case WAITING_POSITION ->{
+                session.setPosition(text);
+                send(chatId,"Tell about your degree");
                 session.setState(State.WAITING_EDUCATION);
             }
 
@@ -124,14 +134,21 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             case WAITING_SOFT_SKILLS-> {
                 session.setSoft_skills(text);
-                String rawData = collectRowData(session);
-                CvData json = cvParserService.parse(rawData);
                 send(chatId,"Add additional links");
                 session.setState(State.WAITING_LINKS);
             }
 
             case WAITING_LINKS -> {
                 session.setLinks(text);
+                String rawData = collectRowData(session);
+                CvData json = cvParserService.parse(rawData);
+                setPersonalData(json, session);
+                try {
+                    byte[] generated = resumeDocumentBuilder.build(json);
+                    Files.write(Path.of("resume.docx"),generated);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
                 send(chatId,"Please choose template");
                 sendTemplateMediaGroup(chatId);
                 sendTemplateKeyBoard(chatId);
@@ -162,7 +179,16 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     }
 
-    private static @NonNull String collectRowData(UserSession session) {
+    private void setPersonalData(CvData json, UserSession session) {
+        json.setFullName(session.getFullName());
+        json.setEmail(session.getEmail());
+        json.setBirthday(session.getBirthday());
+        json.setCity(session.getCity());
+        json.setLinks(session.getLinks());
+        json.setPosition(session.getPosition());
+    }
+
+    private String collectRowData(UserSession session) {
         return "education : " + session.getEducation() + "\n" +
                 "projects : " + session.getProjects() + "\n" +
                 "experience : " + session.getExperience();

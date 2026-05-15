@@ -20,7 +20,12 @@ import java.util.List;
 @Getter
 @Setter
 public class CvData {
-
+    private String fullName;
+    private String email;
+    private String birthday;
+    private String city;
+    private String position;
+    private String links;
     private List<EducationEntry>  education;
     private List<ProjectEntry>    projects;
     private List<ExperienceEntry> experience;
